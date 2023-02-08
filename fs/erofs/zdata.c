@@ -145,7 +145,6 @@ static void erofs_destroy_percpu_workers(void)
 
 static struct kthread_worker *erofs_init_percpu_worker(int cpu)
 {
-
 	struct kthread_worker *worker =
 		kthread_create_worker_on_cpu(cpu, 0, "erofs_worker/%u", cpu);
 
@@ -155,7 +154,6 @@ static struct kthread_worker *erofs_init_percpu_worker(int cpu)
 		sched_set_fifo_low(worker->task);
 	else
 		sched_set_normal(worker->task, 0);
-
 	return worker;
 }
 
@@ -260,10 +258,8 @@ int __init z_erofs_init_zip_subsystem(void)
 
 	z_erofs_workqueue = alloc_workqueue("erofs_worker",
 			WQ_UNBOUND | WQ_HIGHPRI, num_possible_cpus());
-	if (!z_erofs_workqueue) {
-		err = -ENOMEM;
+	if (!z_erofs_workqueue)
 		goto out_error_workqueue_init;
-	}
 
 	err = erofs_init_percpu_workers();
 	if (err)
@@ -281,7 +277,6 @@ out_error_pcpu_worker:
 out_error_workqueue_init:
 	z_erofs_destroy_pcluster_pool();
 out_error_pcluster_pool:
-
 	return err;
 }
 
