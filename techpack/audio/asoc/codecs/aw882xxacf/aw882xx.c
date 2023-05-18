@@ -406,7 +406,7 @@ static int aw882xx_hw_params(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
 	aw_snd_soc_codec_t *codec = aw_get_codec(dai);
-	struct aw882xx *aw882xx =
+	struct aw882xx __maybe_unused *aw882xx =
 		aw_componet_codec_ops.codec_get_drvdata(codec);
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
@@ -1142,7 +1142,7 @@ static int aw882xx_set_rx_en(struct snd_kcontrol *kcontrol,
 {
 	int ret = -EINVAL;
 	uint32_t ctrl_value = 0;
-	struct aw_device *aw_dev = NULL;
+	struct aw_device __maybe_unused *aw_dev = NULL;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
@@ -1305,7 +1305,7 @@ static int aw882xx_get_copp_dis(struct snd_kcontrol *kcontrol,
 {
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
-	struct aw882xx *aw882xx =
+	struct aw882xx __maybe_unused *aw882xx =
 		aw_componet_codec_ops.codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = !g_algo_copp_en;
@@ -1383,7 +1383,7 @@ static int aw882xx_get_spin(struct snd_kcontrol *kcontrol,
 static int aw882xx_get_spin_status(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct aw_device *aw_dev;
+	struct aw_device __maybe_unused *aw_dev = NULL;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
@@ -1773,7 +1773,7 @@ static int aw882xx_update_algo_profile(struct aw882xx *aw882xx)
 {
 	int ret = -1;
 	int new_skt_prof_id = 0;
-	int cur_skt_prof_id = aw882xx->cur_algo_prof_id;
+	int cur_skt_prof_id __maybe_unused = aw882xx->cur_algo_prof_id;
 	struct aw_device *aw_dev = NULL;
 
 	aw_dev_info(aw882xx->dev, "enter");
@@ -1860,7 +1860,7 @@ static int aw882xx_get_algo_bypass_switch(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_BYPASS_ID];
@@ -1895,7 +1895,7 @@ static int aw882xx_get_algo_handset_switch(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_HANDSET_ID];
@@ -1934,7 +1934,7 @@ static int aw882xx_get_algo_hac_switch(struct snd_kcontrol *kcontrol,
 {
 
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_HAC_ID];
@@ -1953,7 +1953,7 @@ static int aw882xx_set_algo_hac_switch(struct snd_kcontrol *kcontrol,
 {
 
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 	bool is_active = false;
 
 	aw_dev_info(aw882xx->dev, "ucontrol->value.integer.value[0]=%ld",
@@ -1975,7 +1975,7 @@ static int aw882xx_get_algo_voice_switch(struct snd_kcontrol *kcontrol,
 {
 
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_VOICE_ID];
@@ -1994,7 +1994,7 @@ static int aw882xx_set_algo_voice_switch(struct snd_kcontrol *kcontrol,
 {
 
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 	bool is_active = false;
 
 	aw_dev_info(aw882xx->dev, "ucontrol->value.integer.value[0]=%ld",
@@ -2015,7 +2015,7 @@ static int aw882xx_get_algo_voip_switch(struct snd_kcontrol *kcontrol,
 {
 
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_VOIP_ID];
@@ -2033,7 +2033,7 @@ static int aw882xx_set_algo_voip_switch(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 	bool is_active = false;
 
 	aw_dev_info(aw882xx->dev, "ucontrol->value.integer.value[0]=%ld",
@@ -2053,7 +2053,7 @@ static int aw882xx_get_algo_music_deepbuffer_switch(struct snd_kcontrol *kcontro
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_DEEPBUFFER_ID];
@@ -2091,7 +2091,7 @@ static int aw882xx_get_algo_music_fasttrack_switch(struct snd_kcontrol *kcontrol
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
-	struct aw882xx *aw882xx = snd_soc_component_get_drvdata(codec);
+	struct aw882xx __maybe_unused *aw882xx = snd_soc_component_get_drvdata(codec);
 
 	struct aw882xx_scene_info *p_aw882xx_scene_st =
 			&aw882xx_scene_state[AW882XX_SCENE_FASTTRACK_ID];
@@ -3116,7 +3116,7 @@ static ssize_t aw882xx_print_dbg_store(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t count)
 {
-	struct aw882xx *aw882xx = dev_get_drvdata(dev);
+	struct aw882xx __maybe_unused *aw882xx = dev_get_drvdata(dev);
 	int ret;
 
 	ret = kstrtouint(buf, 0, &g_print_dbg);
