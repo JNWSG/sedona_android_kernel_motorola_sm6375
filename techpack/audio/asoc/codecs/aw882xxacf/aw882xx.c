@@ -1333,7 +1333,6 @@ static int aw882xx_set_spin(struct snd_kcontrol *kcontrol,
 {
 	int ret = -EINVAL;
 	uint32_t ctrl_value = 0;
-	struct aw_device *aw_dev;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
@@ -1341,8 +1340,6 @@ static int aw882xx_set_spin(struct snd_kcontrol *kcontrol,
 
 	aw_dev_dbg(aw882xx->dev, "ucontrol->value.integer.value[0]=%ld",
 			ucontrol->value.integer.value[0]);
-
-	aw_dev = aw882xx->aw_pa;
 
 	ctrl_value = ucontrol->value.integer.value[0];
 	if (aw882xx->pstream) {
@@ -1360,7 +1357,6 @@ static int aw882xx_set_spin(struct snd_kcontrol *kcontrol,
 static int aw882xx_get_spin(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct aw_device *aw_dev;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
