@@ -1392,8 +1392,6 @@ static int aw882xx_get_spin_status(struct snd_kcontrol *kcontrol,
 	int ctrl_value;
 	int ret = -EINVAL;
 
-	aw_dev = aw882xx->aw_pa;
-
 	if (aw882xx->pstream) {
 		ret = aw_dev_get_spin_param(aw_dev, &ctrl_value, &(spin_param.relase_time));
 		if (ret) {
