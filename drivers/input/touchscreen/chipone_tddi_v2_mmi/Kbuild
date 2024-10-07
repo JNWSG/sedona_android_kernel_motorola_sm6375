@@ -1,7 +1,3 @@
-# add -Wall to try to catch everything we can.
-EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/include \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/chipone_tddi_fhd_mmi
 ifneq ($(filter m y,$(CONFIG_CHIPONE_ESD)),)
 EXTRA_CFLAGS += -DCONFIG_CTS_ESD_PROTECTION
 endif
@@ -10,7 +6,6 @@ endif
 
 ifneq ($(filter m y,$(CONFIG_INPUT_CHIPONE_0FLASH_MMI_ENABLE_DOUBLE_TAP)),)
 	EXTRA_CFLAGS += -DCHIPONE_SENSOR_EN
-	KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../../../sensors/$(GKI_OBJ_MODULE_DIR)/Module.symvers
 endif
 
 ifneq ($(filter m y,$(CONFIG_INPUT_CHIPONE_0FLASH_MMI_NOTIFY_TOUCH_STATE)),)
@@ -49,8 +44,7 @@ ifneq ($(filter m y,$(CONFIG_CHIPONE_CHECK_DEVICE_BOOTMODE)),)
 	EXTRA_CFLAGS += -DCTS_CHECK_DEVICE_BOOTMODE
 endif
 
-#obj-$(CONFIG_TOUCHSCREEN_CHIPONE) += chipone-tddi.o
-obj-m += chipone_tddi_v2_mmi.o
+obj-$(CONFIG_TOUCHSCREEN_CHIPONE) += chipone_tddi_v2_mmi.o
 
 chipone_tddi_v2_mmi-objs := cts_driver.o
 chipone_tddi_v2_mmi-objs += cts_core.o
@@ -66,5 +60,3 @@ chipone_tddi_v2_mmi-objs += cts_tool.o
 chipone_tddi_v2_mmi-objs += cts_sysfs.o
 chipone_tddi_v2_mmi-objs += cts_strerror.o
 chipone_tddi_v2_mmi-objs += cts_oem.o
-KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../touchscreen_mmi/$(GKI_OBJ_MODULE_DIR)/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../../../mmi_info/$(GKI_OBJ_MODULE_DIR)/Module.symvers

@@ -1,12 +1,4 @@
-# add -Wall to try to catch everything we can.
-EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/include \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/ilitek_v3_mmi \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/ilitek_v3_mmi/firmware
-
-ifeq ($(filter m y, $(CONFIG_TOUCHSCREEN_ILITEK_CHIPSET)),)
-	obj-m += ilitek_v3_mmi.o
-endif
+obj-$(CONFIG_TOUCHSCREEN_ILITEK_CHIPSET) += ilitek_v3_mmi.o
 
 ifneq ($(filter m y,$(CONFIG_INPUT_ILI_ENABLE_DOUBLE_TAP)),)
 	EXTRA_CFLAGS += -DILI_SENSOR_EN
@@ -66,5 +58,3 @@ ilitek_v3_mmi-objs += ilitek_v3_touch.o
 ilitek_v3_mmi-objs += ilitek_v3_mp.o
 ilitek_v3_mmi-objs += ilitek_v3_hostdl.o
 ilitek_v3_mmi-objs += ilitek_v3_node.o
-KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../touchscreen_mmi/$(GKI_OBJ_MODULE_DIR)/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../../../mmi_info/$(GKI_OBJ_MODULE_DIR)/Module.symvers
