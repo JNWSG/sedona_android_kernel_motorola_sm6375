@@ -149,7 +149,7 @@ static int aw_check_header_size(struct device *dev,
 static int aw_check_ddt_size_v_0_0_0_1(struct device *dev, char *fw_data)
 {
 	struct aw_acf_hdr *acf_hdr = (struct aw_acf_hdr *)fw_data;
-	struct aw_acf_dde *acf_dde = NULL;
+	struct aw_acf_dde __maybe_unused *acf_dde = NULL;
 
 	acf_dde = (struct aw_acf_dde *)(fw_data + acf_hdr->ddt_offset);
 
@@ -281,7 +281,7 @@ static int aw_check_data_v_0_0_0_1(struct device *dev,
 static int aw_check_ddt_size_v_1_0_0_0(struct device *dev, char *fw_data)
 {
 	struct aw_acf_hdr *acf_hdr = (struct aw_acf_hdr *)fw_data;
-	struct aw_acf_dde_v_1_0_0_0 *acf_dde = NULL;
+	struct aw_acf_dde_v_1_0_0_0 __maybe_unused *acf_dde = NULL;
 
 	acf_dde = (struct aw_acf_dde_v_1_0_0_0 *)(fw_data + acf_hdr->ddt_offset);
 

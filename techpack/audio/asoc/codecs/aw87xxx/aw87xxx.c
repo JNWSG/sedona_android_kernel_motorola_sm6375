@@ -527,7 +527,7 @@ static int aw87xxx_profile_switch_get(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	int index = 0;
-	char *profile;
+	char __maybe_unused *profile;
 	struct aw87xxx *aw87xxx = (struct aw87xxx *)kcontrol->private_value;
 
 	if (aw87xxx == NULL) {
