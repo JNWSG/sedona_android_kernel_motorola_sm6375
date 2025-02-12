@@ -1,5 +1,5 @@
 #
-# Focaltech Touchscreen driver configuration
+# Chipone Touchscreen driver configuration
 #
 
 config TOUCHSCREEN_CHIPONE
@@ -9,3 +9,67 @@ config TOUCHSCREEN_CHIPONE
 	help
 	  Say Y here if you have Moto Chipone touch panel.
 	  If unsure, say N.
+
+config INPUT_CHIPONE_0FLASH_MMI_ENABLE_DOUBLE_TAP
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config INPUT_CHIPONE_0FLASH_MMI_NOTIFY_TOUCH_STATE
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config STOWED_MODE_EN
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config INPUT_TOUCHSCREEN_MMI
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config BOARD_USES_DOUBLE_TAP_CTRL
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config INPUT_CHIPONE_PANEL_NOTIFICATIONS
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config GTP_LAST_TIME
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
+
+config CHIPONE_ESD
+        tristate "Moto CHIPONE Touchscreen"
+        depends on I2C
+        default n
+        help
+          Say Y here if you have Moto Chipone touch panel.
+          If unsure, say N.
