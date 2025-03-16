@@ -1621,6 +1621,8 @@ int32_t npu_host_unload_network(struct npu_client *client,
 	}
 	network->is_unloading = true;
 
+	network->is_unloading = true;
+
 	pr_debug("Unload network %lld\n", network->id);
 	/* prepare IPC packet for UNLOAD */
 	unload_packet.header.cmd_type = NPU_IPC_CMD_UNLOAD;
@@ -1722,6 +1724,12 @@ int32_t npu_host_exec_network(struct npu_client *client,
 
 	if (atomic_inc_return(&host_ctx->network_execute_cnt) == 1)
 		npu_notify_cdsprm_cxlimit_activity(npu_dev, true);
+
+	if (network->is_unloading) {
+		NPU_ERR("network is unloading\n");
+		ret = -EINVAL;
+		goto exec_v2_done;
+	}
 
 	if (!network->is_active) {
 		pr_err("network is not active\n");
