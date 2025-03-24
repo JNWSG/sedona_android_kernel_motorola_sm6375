@@ -14,7 +14,6 @@
 #include <linux/sizes.h>
 #include <linux/regulator/consumer.h>
 #include <linux/jiffies.h>
-#include <linux/version.h>
 
 #define CWFG_ENABLE_LOG 1 /* CHANGE Customer need to change this for enable/disable log */
 
@@ -124,7 +123,6 @@ struct cw_battery {
 #else
 	struct power_supply *cw_bat;
 	struct power_supply *batt_psy;
-	struct power_supply *usb_psy;
 #endif
 	int  chip_id;
 	int  voltage;
@@ -343,92 +341,28 @@ static int cw_get_voltage(struct cw_battery *cw_bat)
  #ifndef MAX_VAL
    #define  MAX_VAL( x, y ) ( ((x) > (y)) ? (x) : (y) )
 #endif
-
-#ifdef DYNAMIC_UPDATE_UI_FULL
 #define TIMER_INTERVALS                          1000 * 60    /* unit:ms */
-static bool jiffies_timer_expire(bool clear_flag) {
+static bool jiffies_timer_expire(void) {
 	unsigned long cur_jiffies = jiffies;
 	static unsigned long last_jiffies = 0;
+	unsigned long intr_timeout = msecs_to_jiffies(TIMER_INTERVALS);
 	bool ret = false;
 
-	if (!last_jiffies || clear_flag) {
+	if (!last_jiffies)
 		last_jiffies = cur_jiffies;
-		return ret;
-	}
 
-	if (time_after(cur_jiffies, msecs_to_jiffies(TIMER_INTERVALS) + last_jiffies))
+	if (time_after(cur_jiffies, intr_timeout + last_jiffies))
 		ret = true;
 	else
 		ret = false;
 
 	if (ret) {
-		cw_printk("expire 60s, curr_jiffies:%dms, last jiffies %d",
+              cw_printk("exire 10s, curr_jiffies:%dms, last jiffies %d",
                               jiffies_to_msecs(cur_jiffies), jiffies_to_msecs(last_jiffies));
 		last_jiffies = cur_jiffies;
 
 	}
 	return ret;
-}
-
-static int cw_set_ui_full(struct cw_battery *cw_bat, int ui_full)
-{
-	int i, ret = 0;
-	int retry = 3;
-	unsigned char reg_val = ui_full;
-
-	for (i = 0; i < retry; i++) {
-		ret = cw_write(cw_bat->client, REG_USER_CONF, &reg_val);
-		if (ret < 0) {
-			msleep(CW_SLEEP_10MS);
-			cw_printk("failed to write ui_full to reg, retry = %d", i);
-		} else {
-			cw_printk("success save ui_full %d to reg", ui_full);
-			break;
-		}
-	}
-	return ret;
-}
-
-static int cw_get_ui_full(struct cw_battery *cw_bat, int *ui_full) {
-	int i, ret = 0;
-	int retry = 3;
-	unsigned char reg_val;
-
-	for (i = 0; i < retry; i++) {
-		ret = cw_read(cw_bat->client, REG_USER_CONF, &reg_val);
-		if (ret >= 0 && reg_val <= CW_UI_FULL && reg_val >= cw_bat->ui_full) {
-			*ui_full = reg_val;
-			cw_printk("success read ui_full %d from reg", *ui_full);
-			break;
-		}
-		msleep(CW_SLEEP_10MS);
-	}
-	return ret;
-}
-#endif
-
-static void cw_get_batt_status(struct cw_battery *cw_bat)
-{
-	long batt_curr = 0;
-	batt_curr = cw_bat->cw_current * CW_CUR_UNIT;
-	batt_curr *= cw_bat->ibat_polority;
-
-	if (cw_bat->voltage <= 0 || cw_bat->temp <= CW_BPD_TEMP)
-		cw_bat->present = 0;
-	else
-		cw_bat->present = 1;
-
-	if (!cw_bat->present) {
-		cw_bat->batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
-	} else if (cw_bat->ui_soc == CW_UI_FULL) {
-		cw_bat->batt_status = POWER_SUPPLY_STATUS_FULL;
-	} else if (abs(batt_curr) < CW_CUR_ACCURACY) {
-		cw_bat->batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
-	} else if (batt_curr < 0) {
-		cw_bat->batt_status = POWER_SUPPLY_STATUS_CHARGING;
-	} else {
-		cw_bat->batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
-	}
 }
 
 static int cw_get_capacity(struct cw_battery *cw_bat)
@@ -440,15 +374,12 @@ static int cw_get_capacity(struct cw_battery *cw_bat)
 	int ui_soc;
 	int remainder;
 	int chr_st_now = 0;// 0 discharge, 1 charging;
-	union power_supply_propval usb_online = {0};
-#ifndef DYNAMIC_UPDATE_UI_FULL
-	int ui_100 = cw_bat->ui_full;
-#else
+
 	static int ui_full_pre = 0;
 	int ui_full_temp = 0;
-#endif
 
-	cw_get_batt_status(cw_bat);
+	if (ui_full_pre == 0)
+		ui_full_pre = cw_bat->ui_full;
 
 	if (cw_bat->batt_status == POWER_SUPPLY_STATUS_CHARGING)
 		chr_st_now = 1;
@@ -462,73 +393,34 @@ static int cw_get_capacity(struct cw_battery *cw_bat)
 	soc_l = reg_val[1];
 	cw_bat->raw_soc = soc_h;
 
-#ifndef DYNAMIC_UPDATE_UI_FULL
-	ui_soc = ((soc_h * 256 + soc_l) * 100)/ (ui_100 * 256);
-	remainder = (((soc_h * 256 + soc_l) * 100 * 100) / (ui_100 * 256)) % 100;
-#else
-	if (ui_full_pre == 0) {
-		ret = cw_get_ui_full(cw_bat, &ui_full_temp);
-		if (ret < 0 || ui_full_temp == 0) {
-			ui_full_pre = cw_bat->ui_full;
-		} else {
-			ui_full_pre = ui_full_temp;
-		}
-		cw_printk("CW2015[%d]: UI_FULL INIT is %d", __LINE__, ui_full_pre);
-	}
 	ui_full_temp = ui_full_pre;
 
 	if (chr_st_now) {
 		if (ui_full_temp > cw_bat->ui_full) {
-			if (jiffies_timer_expire(false)) {
+			if (jiffies_timer_expire()) {
 				ui_full_temp -= 1;
-				cw_set_ui_full(cw_bat, ui_full_temp);
 				cw_printk("CW2015[%d]: UI_FULL-- %d!!!!\n", __LINE__, ui_full_temp);
 			}
 		}
 	}
 
-	if (!chr_st_now) {
-		if ((soc_h * 256 + soc_l) / 256 > ui_full_temp) {
+      if (!chr_st_now) {
+		if ((soc_h * 256 + soc_l) > ui_full_temp * 256) {
 			cw_printk("CW2015[%d]: update UI_FULL to %d from %d !!!!\n", __LINE__, (soc_h * 256 + soc_l) / 256, ui_full_temp);
 			ui_full_temp = (soc_h * 256 + soc_l) / 256;
-			cw_set_ui_full(cw_bat, ui_full_temp);
 		}
-		jiffies_timer_expire(true);
-	}
+      }
 
 	ui_full_pre = ui_full_temp;
 	ui_soc = ((soc_h * 256 + soc_l) * 100)/ (ui_full_pre * 256);
 	remainder = (((soc_h * 256 + soc_l) * 100 * 100) / (ui_full_pre * 256)) % 100;
-#endif
-
 	if (ui_soc >= 100){
 		cw_printk("CW2015[%d]: UI_SOC = %d larger 100!!!!\n", __LINE__, ui_soc);
 		ui_soc = 100;
 	}
-
-	if (cw_bat->usb_psy) {
-		power_supply_get_property(cw_bat->usb_psy, POWER_SUPPLY_PROP_ONLINE, &usb_online);
-	}
-
-	if (usb_online.intval && (cw_bat->ui_soc == 100) && (ui_soc < cw_bat->ui_soc) &&
-		(cw_bat->batt_status != POWER_SUPPLY_STATUS_DISCHARGING)) {
-		cw_printk("CW2015[%d]: usb online = %d, ui_soc_reg = %d, remainder:%d", __LINE__, usb_online.intval, ui_soc, remainder);
-		ui_soc = 100;
-	}
-
-	if ((cw_bat->ui_soc == 0) ||
-		(chr_st_now && ui_soc > cw_bat->ui_soc) ||
-		(!chr_st_now && ui_soc < cw_bat->ui_soc)) {
-		cw_bat->ui_soc = ui_soc;
-	}
-
-	if (cw_bat->ui_soc != ui_soc) {
-		cw_printk("CW2015[%d]: not update, cw_bat->ui_soc %d, ui_soc %d, chrg_st_now %d",
-			__LINE__, cw_bat->ui_soc, ui_soc, chr_st_now);
-	}
-
 	cw_bat->ic_soc_h = soc_h;
 	cw_bat->ic_soc_l = soc_l;
+	cw_bat->ui_soc = ui_soc;
 
 	return 0;
 }
@@ -815,8 +707,6 @@ static int cw2217_get_state(struct cw_battery *cw_bat)
 	ret = cw_read(cw_bat->client, REG_MODE_CONFIG, &reg_val);
 	if (ret < 0)
 		return ret;
-
-	cw_printk("REG_MODE_CONFIG 0x%2x = 0x%2x\n", REG_MODE_CONFIG, reg_val);
 	if (reg_val != CONFIG_MODE_ACTIVE)
 		return CW2217_NOT_ACTIVE;
 
@@ -831,11 +721,9 @@ static int cw2217_get_state(struct cw_battery *cw_bat)
 		if (ret < 0)
 			return ret;
 		reg_profile = REG_BAT_PROFILE + i;
-		if (config_profile_info[i] != reg_val) {
-			cw_printk("config profile mismatch, config_profile_info[%d]: 0x%2x, reg_val[0x%2x]: 0x%2x\n",
-				i, config_profile_info[i], reg_profile, reg_val);
+		cw_printk("0x%2x = 0x%2x\n", reg_profile, reg_val);
+		if (config_profile_info[i] != reg_val)
 			break;
-		}
 	}
 	if ( i != SIZE_OF_PROFILE)
 		return CW2217_PROFILE_NEED_UPDATE;
@@ -901,12 +789,6 @@ static void cw_bat_work(struct work_struct *work)
 			cw_printk("%s: get batt_psy fail\n", __func__);
 	}
 
-	if (!cw_bat->usb_psy) {
-		cw_bat->usb_psy = power_supply_get_by_name("usb");
-		if (!cw_bat->usb_psy)
-			cw_printk("%s: get batt_psy fail\n", __func__);
-	}
-
 	if (cw_bat->batt_psy && ui_soc != cw_bat->ui_soc) {
 		power_supply_changed(cw_bat->batt_psy);
 	}
@@ -919,11 +801,6 @@ static void cw_hw_init_work(struct work_struct *work)
 	int loop = 0;
 
 	cw_bat = container_of(work, struct cw_battery, hw_init_work);
-
-	ret = cw_init_data(cw_bat);
-	if (ret) {
-		printk("%s : cw2217 init data fail!\n", __func__);
-	}
 
 	ret = cw_init(cw_bat);
 	while ((loop++ < CW_RETRY_COUNT) && (ret != 0)) {
@@ -1072,11 +949,10 @@ static int cw_parse_dts(struct cw_battery *cw_bat)
 	}
 
 	if (of_property_read_bool(np, "ibat-invert-polority"))
-		cw_bat->ibat_polority = 1;
-	else
 		cw_bat->ibat_polority = -1;
+	else
+		cw_bat->ibat_polority = 1;
 
-	cw_info("ibat_polority=%d \n", cw_bat->ibat_polority);
 	return rc;
 }
 
@@ -1099,11 +975,31 @@ static int cw_battery_set_property(struct power_supply *psy,
 		break;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	cw_info("%s, cw ntc_exist:%d\n", __func__, cw_bat->ntc_exist);
-#endif
-
 	return ret;
+}
+
+static void cw_get_batt_status(struct cw_battery *cw_bat)
+{
+	long batt_curr = 0;
+	batt_curr = cw_bat->cw_current * CW_CUR_UNIT * (-1);
+	batt_curr *= cw_bat->ibat_polority;
+
+	if (cw_bat->voltage <= 0 || cw_bat->temp <= CW_BPD_TEMP)
+		cw_bat->present = 0;
+	else
+		cw_bat->present = 1;
+
+	if (!cw_bat->present) {
+		cw_bat->batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
+	} else if (cw_bat->ui_soc == CW_UI_FULL) {
+		cw_bat->batt_status = POWER_SUPPLY_STATUS_FULL;
+	} else if (abs(batt_curr) < CW_CUR_ACCURACY) {
+		cw_bat->batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+	} else if (batt_curr * cw_bat->ibat_polority < 0) {
+		cw_bat->batt_status = POWER_SUPPLY_STATUS_CHARGING;
+	} else {
+		cw_bat->batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
+	}
 }
 
 static unsigned int cw_get_charge_counter(struct cw_battery *cw_bat)
@@ -1165,7 +1061,7 @@ static int cw_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		cw_get_current(cw_bat);
-		val->intval = cw_bat->cw_current * CW_CUR_UNIT;
+		val->intval = cw_bat->cw_current * CW_CUR_UNIT * (-1);
 		val->intval *= cw_bat->ibat_polority;
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
@@ -1317,11 +1213,7 @@ error:
 	return ret;
 }
 
-#if (KERNEL_VERSION(6, 1, 25) > LINUX_VERSION_CODE)
 static int cw2217_remove(struct i2c_client *client)
-#else
-static void cw2217_remove(struct i2c_client *client)
-#endif
 {
 	struct cw_battery *cw_bat = i2c_get_clientdata(client);
 
@@ -1331,9 +1223,7 @@ static void cw2217_remove(struct i2c_client *client)
 			regulator_disable(cw_bat->vdd_i2c_vreg);
 		devm_regulator_put(cw_bat->vdd_i2c_vreg);
 	}
-#if (KERNEL_VERSION(6, 1, 25) > LINUX_VERSION_CODE)
 	return 0;
-#endif
 }
 
 #ifdef CONFIG_PM

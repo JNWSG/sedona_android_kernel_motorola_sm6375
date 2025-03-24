@@ -50,8 +50,8 @@
 #define ENABLE_MAP_SOC
 
 #ifdef ENABLE_MAP_SOC
-#define MAP_MAX_SOC		98
-#define MAP_RATE_SOC	985
+#define MAP_MAX_SOC		97
+#define MAP_RATE_SOC	975
 #define MAP_MIN_SOC		4
 #endif
 
@@ -1081,6 +1081,8 @@ static int fg_set_property(struct power_supply *psy,
 				       const union power_supply_propval *val)
 {
 	int ret = 0;
+	struct sm_fg_chip *sm;
+	sm = power_supply_get_drvdata(psy);
 
 	switch(prop) {
 	default:

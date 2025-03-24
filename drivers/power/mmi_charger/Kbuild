@@ -1,3 +1,4 @@
-cflags-$(CONFIG_MMI_RECHARGER_HAWAO_MODE) += -DCONFIG_MMI_RECHARGER_HAWAO_MODE
+# add -Wall to try to catch everything we can.
+EXTRA_CFLAGS += -Wall
 
 obj-$(CONFIG_MMI_CHARGER) += mmi_charger.o

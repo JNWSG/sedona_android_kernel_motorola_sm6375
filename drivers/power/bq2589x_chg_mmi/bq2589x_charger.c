@@ -31,13 +31,8 @@
 #include <linux/seq_file.h>
 #include <uapi/linux/sched/types.h>
 #include <linux/kthread.h>
-#include <linux/version.h>
 #include <linux/iio/consumer.h>
 #include "bq2589x_reg.h"
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-#include <linux/qti_power_supply.h>
-#endif
 
 #ifdef __indicator_led_en__
 static struct bq2589x *bq_g;
@@ -1304,21 +1299,13 @@ static int bq2589x_power_supply_get_property(struct power_supply *psy,
 				val->intval = POWER_SUPPLY_USB_TYPE_DCP;
 				break;
 			case 4: /* 100 - Adjustable High Voltage DCP */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-				val->intval = QTI_POWER_SUPPLY_TYPE_USB_HVDCP;
-#else
 				val->intval = POWER_SUPPLY_TYPE_USB_HVDCP;
-#endif
 				break;
 			case 5: /* 101 - Unkown Adapter */
 				val->intval = POWER_SUPPLY_USB_TYPE_UNKNOWN;
 				break;
 			case 6: /* 110 - Non-Standard Adapter */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-				val->intval = QTI_POWER_SUPPLY_TYPE_USB_FLOAT;
-#else
 				val->intval = POWER_SUPPLY_TYPE_USB_FLOAT;
-#endif
 				break;
 			default:
 				val->intval = POWER_SUPPLY_CHARGE_TYPE_UNKNOWN;
@@ -1844,11 +1831,7 @@ static int mmi_detected_qc20_hvdcp(struct bq2589x *bq, int *charger_type)
 
 	if (vbus_voltage > MMI_HVDCP2_VOLTAGE_STANDARD) {
 		dev_info(bq->dev, "QC20 charger detected\n");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		*charger_type = QTI_POWER_SUPPLY_TYPE_USB_HVDCP;
-#else
 		*charger_type = POWER_SUPPLY_TYPE_USB_HVDCP;
-#endif
 	} else {
 		dev_info(bq->dev, "charger type is not HVDCP\n");
 	}
@@ -1953,11 +1936,7 @@ static int mmi_detected_qc30_hvdcp(struct bq2589x *bq, int *charger_type)
 	dev_info(bq->dev, "%s vbus voltage now = %d in detected qc30\n", __func__,vbus_voltage);
 
 	if (vbus_voltage > MMI_HVDCP3_VOLTAGE_STANDARD) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		*charger_type = QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3;
-#else
 		*charger_type = POWER_SUPPLY_TYPE_USB_HVDCP_3;
-#endif
 		dev_info(bq->dev, "%s QC3.0 charger detected\n", __func__);
 	}
 
@@ -2214,11 +2193,7 @@ bool qc3p_update_policy(struct bq2589x *chip )
 }
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-int bq2589x_enable_termination(struct charger_device *chg_dev, bool enable)
-#else
 static int bq2589x_enable_termination(struct charger_device *chg_dev, bool enable)
-#endif
 {
 	struct bq2589x *bq = dev_get_drvdata(&chg_dev->dev);
 	u8 val;
@@ -2265,11 +2240,7 @@ static int mmi_hvdcp_detect_kthread(void *param)
 			goto out;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		if (charger_type != QTI_POWER_SUPPLY_TYPE_USB_HVDCP || bq->pd_active)
-#else
 		if (charger_type != POWER_SUPPLY_TYPE_USB_HVDCP || bq->pd_active)
-#endif
 			goto out;
 
 		//do qc3.0 detected
@@ -2377,11 +2348,7 @@ static void bq2589x_adapter_in_func(struct bq2589x *bq)
 	switch (bq->vbus_type) {
 		case BQ2589X_VBUS_MAXC:
 			dev_info(bq->dev, "%s:HVDCP adapter plugged in\n", __func__);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-			bq->real_charger_type = QTI_POWER_SUPPLY_TYPE_USB_HVDCP;
-#else
 			bq->real_charger_type = POWER_SUPPLY_TYPE_USB_HVDCP;
-#endif
 			bq->chg_dev->noti.hvdcp_done = true;
 			schedule_delayed_work(&bq->ico_work, 0);
 			break;
@@ -2403,11 +2370,7 @@ static void bq2589x_adapter_in_func(struct bq2589x *bq)
 			dev_err(bq->dev, "%s:Unkown adpater plugged in\n", __func__);
 		case BQ2589X_VBUS_NONSTAND:
 			dev_info(bq->dev, "%s:NON STAND plugged in\n", __func__);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-			bq->real_charger_type = QTI_POWER_SUPPLY_TYPE_USB_FLOAT;
-#else
 			bq->real_charger_type = POWER_SUPPLY_TYPE_USB_FLOAT;
-#endif
 			break;
 		default:
 			dev_info(bq->dev, "%s:Other adapter %d plugged in\n", __func__, bq->vbus_type);

@@ -1,5 +1,5 @@
 config MMI_CHARGER
-        tristate "MMI CHARGER"
+        tristate "MMI Charger"
         default n
         help
          Say Y here if you have a mmi charger compatible
@@ -9,9 +9,9 @@ config MMI_CHARGER
          will be called mmi_charger.
 
 config MMI_QC3P_TURBO_CHARGER
-    bool "Enable MMI QC3P Turbo Charger"
-    default n
-    help
-        Say Y here to enable mmi QC3P Turbo Charger.
-
-        If unsure, say N.
+             bool "Enable MMI QC3P Turbo Charger"
+         default n
+         help
+         Say Y here to enable mmi QC3P Turbo Charger.
+         
+         If unsure, say N.

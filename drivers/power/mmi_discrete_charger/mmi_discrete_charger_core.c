@@ -29,16 +29,12 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/thermal.h>
-#include <linux/version.h>
+
 #include "mmi_discrete_charger_core.h"
 #include "mmi_discrete_voter.h"
 #include "mmi_discrete_charger_iio.h"
 #include "mmi_discrete_factory_tcmd.h"
 #include <linux/mmi_discrete_charger_class.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-#include <linux/qti_power_supply.h>
-#endif
 
 static bool debug_enabled;
 module_param(debug_enabled, bool, 0600);
@@ -125,12 +121,6 @@ static int mmi_discrete_parse_dts(struct mmi_discrete_charger *chip)
 		}
 	}
 
-	rc = of_property_read_u32(node, "mmi,dcp-noneffc-cv",
-				  &chip->dcp_noneffc_cv);
-	if (rc)
-		chip->dcp_noneffc_cv = 4500;
-
-	chip->enable_10w_ffc = of_property_read_bool(node, "mmi,enable-10w-ffc");
 	chip->mosfet_supported = of_property_read_bool(node, "mmi,usb-mosfet-supported");
 	chip->pd_supported = of_property_read_bool(node, "mmi,usb-pd-supported");
 
@@ -579,36 +569,13 @@ static int mmi_get_rp_based_dcp_current(struct mmi_discrete_charger *chg, int ty
 	return rp_ua;
 }
 
-static int mmi_discrete_get_batt_capacity_level(struct mmi_discrete_charger *chg)
-{
-	union power_supply_propval batt_soc;
-
-	power_supply_get_property(chg->mmi_psy, POWER_SUPPLY_PROP_CAPACITY, &batt_soc);
-
-	if (batt_soc.intval >= 100)
-		return POWER_SUPPLY_CAPACITY_LEVEL_FULL;
-	else if (batt_soc.intval >= 80 && batt_soc.intval < 100)
-		return POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
-	else if (batt_soc.intval >= 20 && batt_soc.intval < 80)
-		return POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
-	else if (batt_soc.intval > 0 && batt_soc.intval < 20)
-		return POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-	else if (batt_soc.intval == 0)
-		return POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
-	else
-		return POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
-}
-
 static int mmi_discrete_handle_usb_current(struct mmi_discrete_charger *chg,
 					int usb_current)
 {
 	int rc = 0, rp_ua;
 	union power_supply_propval val = {0, };
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	if (chg->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_FLOAT) {
-#else
+
 	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT) {
-#endif
 		if (usb_current == -ETIMEDOUT) {
 				/*
 				 * Valid FLOAT charger, report the current
@@ -646,11 +613,6 @@ static int mmi_discrete_handle_usb_current(struct mmi_discrete_charger *chg,
 							false, 0);
 			return 0;
 		}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_CDP)
-			return 0;
-#endif
 
 		rc = vote(chg->usb_icl_votable, USB_PSY_VOTER, true,
 							usb_current);
@@ -1072,11 +1034,8 @@ static void mmi_discrete_config_qc_charger(struct mmi_discrete_charger *chg)
 	}
 
 	do {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		if (chg->real_charger_type != QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3) {
-#else
+
 		if (chg->real_charger_type != POWER_SUPPLY_TYPE_USB_HVDCP_3) {
-#endif
 			mmi_warn(chg, "Exit for QC3.0 charger removal\n");
 			break;
 		}
@@ -1244,11 +1203,7 @@ static void mmi_discrete_config_charger_input(struct mmi_discrete_charger *chip)
 	if (chip->charger_psy && chip->usb_psy &&
 	    chip->constraint.hvdcp_pmax >= HVDCP_POWER_MIN &&
 	    chip->chg_info.chrg_mv > HVDCP_VOLTAGE_MIN &&
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	    chip->chg_info.chrg_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3 &&
-#else
 	    chip->chg_info.chrg_type == POWER_SUPPLY_TYPE_USB_HVDCP_3 &&
-#endif
 	    chip->pd_active == MMI_POWER_SUPPLY_PD_INACTIVE)
 		mmi_discrete_config_qc_charger(chip);
 
@@ -1286,9 +1241,6 @@ static void mmi_discrete_config_charger_output(struct mmi_discrete_charger *chip
 			chip->chg_clients[i].chrg_taper_cnt = 0;
 	}
 
-	if (chip->ffc_stop_chrg && chip->enable_10w_ffc)
-		charging_disable = true;
-
 	if (charging_reset && !charging_disable && !chg_dis) {
 		vote(chip->chg_disable_votable, MMI_HB_VOTER, true, 0);
 		mmi_warn(chip, "Charge Halt..Toggle\n");
@@ -1324,10 +1276,11 @@ static void mmi_discrete_config_chgmod_to_fg(struct mmi_discrete_charger *chip)
 {
 	union power_supply_propval val;
 	int rc = 0;
-	if (!chip->bms_psy)
+
+	if (!chip->bms_psy || !chip->chgmod_to_fg)
 		return;
-	if (chip->chg_info.chrg_pmax_mw > TURBO_CHRG_FFC_THRSH_MW||
-			(chip->is_ffc_enable && chip->enable_10w_ffc)) {
+
+	if (chip->chg_info.chrg_pmax_mw > TURBO_CHRG_FFC_THRSH_MW) {
 		val.intval = MMI_CHARGER_MODE_FFC;
 	} else if (chip->chg_info.chrg_type == POWER_SUPPLY_TYPE_USB) {
 		val.intval = MMI_CHARGER_MODE_USB;
@@ -1336,7 +1289,7 @@ static void mmi_discrete_config_chgmod_to_fg(struct mmi_discrete_charger *chip)
 	}
 
 	rc = power_supply_set_property(chip->bms_psy, POWER_SUPPLY_PROP_TYPE, &val);
-	mmi_dbg(chip,"%s config charger mode to fg\n", rc? "Can't" : "success");
+	mmi_dbg(chip, "%s config charger mode to fg\n", rc? "Can't" : "success");
 
 }
 
@@ -1375,7 +1328,6 @@ static enum power_supply_property batt_props[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_CAPACITY,
-	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
@@ -1446,9 +1398,6 @@ static int batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = power_supply_get_property(chip->bms_psy, psp, val);
-		break;
-	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
-		val->intval = mmi_discrete_get_batt_capacity_level(chip);
 		break;
 	default:
 		mmi_err(chip, "Get not support prop %d rc = %d\n", psp, rc);
@@ -2121,11 +2070,7 @@ static void mmi_handle_hvdcp_check_timeout(struct mmi_discrete_charger *chg,
 
 	if (hvdcp_done) {
 		hvdcp_ua = (chg->real_charger_type ==
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-				QTI_POWER_SUPPLY_TYPE_USB_HVDCP) ?
-#else
 				POWER_SUPPLY_TYPE_USB_HVDCP) ?
-#endif
 				chg->hvdcp2_max_icl_ua :
 				HVDCP_CURRENT_UA;
 
@@ -2175,15 +2120,9 @@ static void update_sw_icl_max(struct mmi_discrete_charger *chg)
 	/*
 	 * HVDCP 2/3, handled separately
 	 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	if (chg->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP
-			|| chg->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3
-			|| chg->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
-#else
 	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP
 			|| chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3
 			|| chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
-#endif
 		return;
 
 	/* TypeC rp med or high, use rp value */
@@ -2214,11 +2153,7 @@ static void update_sw_icl_max(struct mmi_discrete_charger *chg)
 		vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true, rp_ua);
 		vote(chg->usb_icl_votable, USB_PSY_VOTER, false, 0);
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	case QTI_POWER_SUPPLY_TYPE_USB_FLOAT:
-#else
 	case POWER_SUPPLY_TYPE_USB_FLOAT:
-#endif
 		vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
 					SDP_CURRENT_UA);
 		break;
@@ -2250,11 +2185,7 @@ static void mmi_handle_apsd_done(struct mmi_discrete_charger *chip, bool apsd_do
 		if (chip->use_extcon)
 			mmi_notify_device_mode(chip, true);
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	case QTI_POWER_SUPPLY_TYPE_USB_FLOAT:
-#else
 	case POWER_SUPPLY_TYPE_USB_FLOAT:
-#endif
 	case POWER_SUPPLY_TYPE_USB_DCP:
 		break;
 	default:
@@ -2318,20 +2249,11 @@ int mmi_discrete_get_hw_current_max(struct mmi_discrete_charger *chip, int *tota
 	}
 
 	/* QC 2.0/3.0 adapter */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	if (chip->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP) {
-#else
 	if (chip->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) {
-#endif
 		*total_current_ua = chip->hvdcp2_max_icl_ua;
 		return 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	} else if (chip->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3
-			|| chip->real_charger_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3P5) {
-#else
 	} else if (chip->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3
 			|| chip->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5) {
-#endif
 		*total_current_ua = HVDCP_CURRENT_UA;
 		return 0;
 	}
@@ -2345,11 +2267,7 @@ int mmi_discrete_get_hw_current_max(struct mmi_discrete_charger *chip, int *tota
 		case POWER_SUPPLY_TYPE_USB_DCP:
 			current_ua = DCP_CURRENT_UA;
 			break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		case QTI_POWER_SUPPLY_TYPE_USB_FLOAT:
-#else
 		case POWER_SUPPLY_TYPE_USB_FLOAT:
-#endif
 		case POWER_SUPPLY_TYPE_USB:
 			current_ua = SDP_CURRENT_UA;
 			break;
@@ -2546,249 +2464,6 @@ int mmi_charger_pd_vdm_verify(struct mmi_discrete_charger *chip, int val)
 	return 0;
 }
 
-/*************************
- * DCP   FFC   START  *
- *************************/
-static char *fcc_state_str[] = {
-	"STATE_INITIAL", "STATE_PROBING", "STATE_STANDBY", "STATE_GOREADY", "STATE_RUNNING", "STATE_AVGEXIT", "STATE_FFCDONE", "STATE_INVALID"
-};
-
-enum mmi_chrg_step {
-	STEP_MAX,
-	STEP_NORM,
-	STEP_FULL,
-	STEP_FLOAT,
-	STEP_DEMO,
-	STEP_STOP,
-	STEP_NONE,
-};
-
-static void mmi_charger_ffc_init(struct mmi_discrete_charger *chip)
-{
-	chip->ffc_entry_threshold = 1900;
-	chip->ffc_exit_threshold = 1800;
-	chip->ffc_ibat_windowsum = 0;
-	chip->ffc_ibat_count = 0;
-	chip->ffc_ibat_windowsize = 6;
-	chip->ffc_iavg = 0;
-	chip->ffc_iavg_update_timestamp = 0;
-	chip->ffc_uisoc_threshold = 75;
-	chip->ffc_stop_chrg = false;
-	chip->ffc_state = CHARGER_FFC_STATE_INITIAL;
-	chip->is_ffc_enable = false;
-	mmi_info(chip,"ffc initilaize...\n");
-}
-
-static int mmi_charger_check_dcp_ffc_status(struct mmi_discrete_charger *chip, int batt_soc, int vbatt_mv, int ibatt_ma)
-{
-	bool loop = false;
-	int vbatt, vcurr, chrg_step, batt_mv,batt_ma;
-	unsigned long target_timestamp;
-
-	batt_ma = ibatt_ma * (-1);
-	batt_mv = vbatt_mv;
-	chrg_step = chip->chrg_step;
-
-	if(chrg_step != STEP_MAX && chrg_step != STEP_NORM)
-		return 0;
-	do {
-		mmi_info(chip,"ffc_state:%s, StepChg:%d, uisoc:%d, chg_type:%d batt_mv:%d batt_ma:%d\n", fcc_state_str[chip->ffc_state], chrg_step, batt_soc, chip->chg_info.chrg_type, batt_mv, batt_ma);
-		switch (chip->ffc_state) {
-			case CHARGER_FFC_STATE_INITIAL:
-				if ((chrg_step == STEP_MAX) &&
-					(chip->chg_info.chrg_type == POWER_SUPPLY_TYPE_USB_DCP ||
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-					 chip->chg_info.chrg_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3) &&
-#else
-					 chip->chg_info.chrg_type == POWER_SUPPLY_TYPE_USB_HVDCP_3) &&
-#endif
-					(chip->chg_info.chrg_pmax_mw <= 15000)) {
-					if (batt_soc >= chip->ffc_uisoc_threshold) {
-						chip->ffc_state = CHARGER_FFC_STATE_PROBING;
-						mmi_info(chip,"uisoc is up to %d, ffc probing starts\n", chip->ffc_uisoc_threshold);
-					}
-				}
-				else {
-					if (POWER_SUPPLY_TYPE_UNKNOWN == chip->chg_info.chrg_type) {
-						mmi_info(chip,"chrg_type is unknown");
-					} else
-						chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-					mmi_err(chip,"ui_soc:%d, charge_type:%d not for ffc\n", batt_soc, chip->chg_info.chrg_type);
-				}
-				loop = false;
-			break;
-			case CHARGER_FFC_STATE_PROBING:
-				if (chrg_step == STEP_MAX || chrg_step == STEP_NORM) {
-					if (batt_ma < 0) {
-						mmi_err(chip,"still in discharging at:%d\n", batt_ma);
-						loop = false;
-						break;
-					}
-
-					if (batt_ma > chip->ffc_entry_threshold) {
-						mmi_err(chip,"charging current can bump up to entry threshold:%d\n", chip->ffc_entry_threshold);
-						chip->ffc_state = CHARGER_FFC_STATE_STANDBY;
-					}
-					else if (batt_ma == 0) {
-						mmi_err(chip,"charger doesnt support to bump high level current\n");
-						chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-					}
-					else {
-						mmi_info(chip,"current: %d not reach ffc entry threshold\n", batt_ma);
-						loop = false;
-					}
-				}
-				else {
-					chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-					mmi_info(chip,"invalid stage:%d, ffc session quit\n", chrg_step);
-				}
-			break;
-			case CHARGER_FFC_STATE_STANDBY:
-				if (chrg_step != STEP_MAX && chrg_step != STEP_NORM) {
-					mmi_info(chip,"invalid stage:%d in ffc_state:%d\n", chrg_step, chip->ffc_state);
-					chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-					break;
-				}
-
-				if ((chrg_step == STEP_NORM) && (chip->ffc_iavg >= chip->ffc_entry_threshold)) {
-					chip->ffc_state = CHARGER_FFC_STATE_GOREADY;
-					break;
-				}
-
-				target_timestamp = chip->ffc_iavg_update_timestamp + msecs_to_jiffies(10 * 1000);
-
-				if (time_is_before_eq_jiffies(target_timestamp) || chip->ffc_iavg_update_timestamp == 0) {
-					/* iavg update required */
-					if (batt_ma < 0) {
-						loop = false;
-						mmi_err(chip,"still in discharging at:%d\n", batt_ma);
-						break;
-					}
-
-					chip->ffc_iavg_update_timestamp = jiffies;
-					chip->ffc_ibat_count++;
-					chip->ffc_ibat_windowsum += batt_ma;
-					chip->ffc_iavg = chip->ffc_ibat_windowsum / chip->ffc_ibat_count;
-					mmi_info(chip,"iavg:%d, total:%lu, count:%lu\n", chip->ffc_iavg, chip->ffc_ibat_windowsum, chip->ffc_ibat_count);
-				}
-
-				loop = false;
-			break;
-			case CHARGER_FFC_STATE_GOREADY:
-				if (chrg_step != STEP_NORM) {
-					if (chrg_step == STEP_MAX) {
-						chip->ffc_state = CHARGER_FFC_STATE_STANDBY;
-					} else {
-						mmi_err(chip,"invalid stage:%d in ffc_state:%d, quit ffc session\n", chrg_step, chip->ffc_state);
-						chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-					}
-					break;
-				}
-				chip->ffc_ibat_count = 0;
-				chip->ffc_ibat_windowsum = 0;
-				chip->ffc_iavg = 0;
-				chip->ffc_iavg_update_timestamp = 0;
-				/* set target voltage as the ffc target */
-				chip->is_ffc_enable = true;
-				chip->ffc_state = CHARGER_FFC_STATE_RUNNING;
-				loop = false;
-				mmi_info(chip,"target max_fv_mv:%d\n", chip->max_fv_mv);
-			break;
-			case CHARGER_FFC_STATE_RUNNING:
-				if (chrg_step != STEP_NORM) {
-					if (chrg_step == STEP_MAX) {
-						chip->ffc_state = CHARGER_FFC_STATE_STANDBY;
-					} else {
-						mmi_err(chip,"invalid stage:%d in ffc_state:%d, quit ffc session\n", chrg_step, chip->ffc_state);
-						chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-					}
-					break;
-				}
-
-				if (batt_ma < 0) {
-					mmi_err(chip,"still in discharging at:%d, retry\n", batt_ma);
-					loop = false;
-					break;
-				}
-
-				vcurr = batt_ma;
-				vbatt = batt_mv;
-				chip->is_ffc_enable = true;
-				/* float down offset 30mV to fit in more robust ffc state */
-				if (vbatt < (chip->max_fv_mv - 30)) {
-					chip->ffc_ibat_count++;
-					chip->ffc_ibat_windowsum += vcurr;
-					loop = false;
-
-					if ((chip->ffc_ibat_count % chip->ffc_ibat_windowsize) == 0) {
-						chip->ffc_iavg = chip->ffc_ibat_windowsum / chip->ffc_ibat_count;
-						if (chip->ffc_iavg <= chip->ffc_exit_threshold) {
-							loop = true;
-							chip->ffc_state = CHARGER_FFC_STATE_AVGEXIT;
-						}
-						mmi_info(chip,"ffc_iavg:%d in ffc, max_fv_mv:%d, vbatt:%d,ffc_exit_threshold:%d\n", chip->ffc_iavg, chip->max_fv_mv, vbatt,
-							chip->ffc_exit_threshold);
-					}
-				}
-				else {
-					mmi_err(chip,"ffc charging to target voltage:%d, quit ffc session \n", chip->max_fv_mv);
-					chip->ffc_state = CHARGER_FFC_STATE_FFCDONE;
-					break;
-				}
-			break;
-			case CHARGER_FFC_STATE_AVGEXIT:
-				chip->is_ffc_enable = false;
-				chip->ffc_ibat_count = 0;
-				chip->ffc_ibat_windowsum = 0;
-				chip->ffc_iavg = 0;
-				chip->ffc_state = CHARGER_FFC_STATE_INVALID;
-				if (batt_mv > chip->dcp_noneffc_cv)
-					chip->ffc_stop_chrg = true;
-				loop = false;
-			break;
-			case CHARGER_FFC_STATE_FFCDONE:
-				chip->is_ffc_enable = true;
-				mmi_info(chip,"ffc session done, max_fv_mv:%d\n", chip->max_fv_mv);
-				loop = false;
-			break;
-			case CHARGER_FFC_STATE_INVALID:
-				chip->is_ffc_enable = false;
-				if (chip->ffc_stop_chrg && batt_mv <= chip->dcp_noneffc_cv)
-					chip->ffc_stop_chrg = false;
-				loop = false;
-			break;
-		}
-	} while (loop);
-
-	return 0;
-}
-
-static void mmi_discrete_monitor_10w_ffc(struct mmi_discrete_chg_client *chg, struct mmi_discrete_charger *chip)
-{
-	mmi_dbg(chip, "MMI Discrete monitor_10w_ffc!\n");
-
-	chip->max_fv_mv = get_effective_result(chip->fv_votable)/1000;
-	if (chip->chg_info.chrg_present) {
-		mmi_charger_check_dcp_ffc_status(chip, chg->batt_info.batt_soc, chg->batt_info.batt_mv, chg->batt_info.batt_ma);
-	} else {
-		mmi_charger_ffc_init(chip);
-	}
-}
-
-bool mmi_discrete_is_ffc_enabled(void *data, int chrg_step)
-{
-	struct mmi_discrete_chg_client *chg = data;
-	struct mmi_discrete_charger *chip = chg->chip;
-
-	chip->chrg_step = chrg_step;
-	mmi_discrete_monitor_10w_ffc(chg, chip);
-
-	return chip->is_ffc_enable;
-}
-/*************************
- * DCP   FFC   END  *
- *************************/
-
 static int mmi_discrete_usb_plugout(struct mmi_discrete_charger * chip)
 {
 	chip->real_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
@@ -2946,23 +2621,11 @@ static int mmi_discrete_get_chg_info(void *data, struct mmi_charger_info *chg_in
 			chip->chg_info.chrg_pmax_mw = 7500;
 		else if (usb_type == POWER_SUPPLY_TYPE_USB_DCP)
 			chip->chg_info.chrg_pmax_mw = chip->constraint.dcp_pmax;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		else if (usb_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP)
-#else
 		else if (usb_type == POWER_SUPPLY_TYPE_USB_HVDCP)
-#endif
 			chip->chg_info.chrg_pmax_mw = 7500;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		else if (usb_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3)
-#else
 		else if (usb_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
-#endif
 			chip->chg_info.chrg_pmax_mw = chip->constraint.hvdcp_pmax;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-		else if (usb_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
-#else
 		else if (usb_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
-#endif
 			chip->chg_info.chrg_pmax_mw = 30000;
 		else if (usb_type == POWER_SUPPLY_TYPE_USB_PD) {
 			if (chip->pd_active == MMI_POWER_SUPPLY_PD_PPS_ACTIVE)
@@ -2978,11 +2641,6 @@ static int mmi_discrete_get_chg_info(void *data, struct mmi_charger_info *chg_in
 		if (chip->chg_info.chrg_pmax_mw < (usb_icl * 5 / 1000))
 			chip->chg_info.chrg_pmax_mw = usb_icl * 5 / 1000;
 
-		if(!typec_rp_med_high(chip, chip->typec_mode)
-			&& (usb_type == POWER_SUPPLY_TYPE_USB_DCP)
-			&& (chip->chg_info.chrg_pmax_mw > 12500)) {
-			chip->chg_info.chrg_pmax_mw = 12000; //Show normal charge rate for default DCP
-		}
 		rc = 0;
 		goto completed;
 	}
@@ -3187,9 +2845,6 @@ static int mmi_discrete_charger_init(struct mmi_discrete_charger *chip)
 		driver[i].is_charge_tapered = mmi_discrete_has_current_tapered;
 		driver[i].is_charge_halt = mmi_discrete_charge_halted;
 		driver[i].set_constraint = mmi_discrete_set_constraint;
-		if (chip->enable_10w_ffc) {
-			driver[i].is_ffc_enabled = mmi_discrete_is_ffc_enabled;
-		}
 
 		if (!batt_sn) {
 			df_sn = "unknown-sn";
@@ -3482,76 +3137,6 @@ static int mmi_discrete_init_hw(struct mmi_discrete_charger *chip)
 	return 0;
 }
 
-/*************************
- * battery cooling device *
- *************************/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-static int battery_tcd_get_max_state(struct thermal_cooling_device *cdev,
-	unsigned long *state)
-{
-	struct mmi_discrete_charger *chip = cdev->devdata;
-	union power_supply_propval val;
-	int rc = 0;
-
-	if (!chip->batt_psy)
-		return -EINVAL;
-
-	rc = power_supply_get_property(chip->batt_psy,
-				       POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT_MAX, &val);
-	if (rc)
-		mmi_err(chip, "Couldn't get battery charge control limit max prop rc=%d\n", rc);
-
-	*state = val.intval;
-
-	return 0;
-}
-
-static int battery_tcd_get_cur_state(struct thermal_cooling_device *cdev,
-	unsigned long *state)
-{
-	struct mmi_discrete_charger *chip = cdev->devdata;
-	union power_supply_propval val;
-	int rc = 0;
-
-	if (!chip->batt_psy)
-		return -EINVAL;
-
-	rc = power_supply_get_property(chip->batt_psy,
-				       POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, &val);
-	if (rc)
-		mmi_err(chip, "Couldn't get battery charge control limit prop rc=%d\n", rc);
-
-	*state = val.intval;
-
-	return 0;
-}
-
-static int battery_tcd_set_cur_state(struct thermal_cooling_device *cdev,
-	unsigned long state)
-{
-	struct mmi_discrete_charger *chip = cdev->devdata;
-	union power_supply_propval val;
-	int rc = 0;
-
-	if (!chip->batt_psy)
-		return -EINVAL;
-
-	val.intval = state;
-	rc = power_supply_set_property(chip->batt_psy,
-				       POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, &val);
-	if (rc)
-		mmi_err(chip, "Couldn't set battery charge control limit prop rc=%d\n", rc);
-
-	return 0;
-}
-
-static const struct thermal_cooling_device_ops battery_tcd_ops = {
-	.get_max_state = battery_tcd_get_max_state,
-	.get_cur_state = battery_tcd_get_cur_state,
-	.set_cur_state = battery_tcd_set_cur_state,
-};
-#endif
-
 static int mmi_discrete_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -3649,9 +3234,6 @@ static int mmi_discrete_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&chip->charger_work, mmi_discrete_charger_work);
 	INIT_DELAYED_WORK(&chip->monitor_ibat_work, mmi_discrete_monitor_ibat_work);
 	INIT_DELAYED_WORK(&chip->wireless_icl_work, mmi_discrete_wireless_icl_work);
-	if (chip->enable_10w_ffc) {
-		mmi_charger_ffc_init(chip);
-	}
 
 	chip->batt_psy = devm_power_supply_register(chip->dev,
 						    &batt_psy_desc,
@@ -3662,19 +3244,6 @@ static int mmi_discrete_probe(struct platform_device *pdev)
 		rc = PTR_ERR(chip->batt_psy);
 		goto cleanup;
 	}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	/* Register thermal zone cooling device for battery */
-	chip->cdev = thermal_of_cooling_device_register(dev_of_node(chip->dev),
-		batt_psy_desc.name, chip, &battery_tcd_ops);
-
-	if (IS_ERR(chip->cdev)) {
-		mmi_err(chip, "Cooling register failed for battery, ret:%ld\n",
-			PTR_ERR(chip->cdev));
-		//return PTR_ERR(chip->cdev);
-	} else {
-		mmi_info(chip, "Cooling register success for battery.");
-	}
-#endif
 
 	rc = mmi_discrete_check_battery_supplies(chip);
 	if (rc) {
