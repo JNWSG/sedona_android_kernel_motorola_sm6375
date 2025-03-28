@@ -61,3 +61,4 @@ config INPUT_TOUCHSCREEN_FOCALTECH_0FLASH_MMI
 	help
 	  Say Y here to build the Focaltech 0flash Touchscreen MMI driver as a module.
 	  If unsure, say N.
+
