@@ -1,10 +1,3 @@
-# add -Wall to try to catch everything we can.
-EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/include \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/focaltech_touch_v3 \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/focaltech_touch_v3/include \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/focaltech_touch_v3/focaltech_test
-
 obj-$(CONFIG_TOUCHSCREEN_FTS_V3) := focaltech_v3.o
 focaltech_v3-objs += focaltech_core.o
 focaltech_v3-objs += focaltech_ex_fun.o
@@ -64,7 +57,7 @@ ifneq ($(filter m y,$(CONFIG_FTS_LAST_TIME)),)
     EXTRA_CFLAGS += -DCONFIG_FTS_LAST_TIME
 endif
 
-EXTRA_CFLAGS += -DPRODUCT_BANGKK
+ccflags-$(CONFIG_BANGKK_DTB) += -DPRODUCT_BANGKK
 
 KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../touchscreen_mmi/$(GKI_OBJ_MODULE_DIR)/Module.symvers
 KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../../../mmi_info/$(GKI_OBJ_MODULE_DIR)/Module.symvers

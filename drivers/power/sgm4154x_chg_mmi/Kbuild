@@ -1,13 +1,1 @@
-ifneq ($(filter m y,$(CONFIG_MMI_SGM41513_CHARGER)),)
-        EXTRA_CFLAGS += -DCONFIG_MMI_SGM41513_CHARGER
-endif
-
-ifneq ($(filter m y,$(CONFIG_MMI_QC3P_Z350_DETECTED)),)
-        EXTRA_CFLAGS += -DCONFIG_MMI_QC3P_Z350_DETECTED
-endif
-
-ifneq ($(filter m y,$(CONFIG_MMI_EXT_CHG_LED)),)
-        EXTRA_CFLAGS += -DCONFIG_MMI_EXT_CHG_LED
-endif
-
 obj-$(CONFIG_SGM4154X_CHARGER) += sgm4154x_charger.o

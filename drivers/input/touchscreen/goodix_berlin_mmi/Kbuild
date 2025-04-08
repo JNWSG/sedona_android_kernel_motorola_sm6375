@@ -41,3 +41,6 @@ ifneq ($(filter m y,$(CONFIG_INPUT_TOUCHSCREEN_MMI)),)
     ccflags-y += -DCONFIG_INPUT_TOUCHSCREEN_MMI
     goodix_brl_mmi-objs += goodix_ts_mmi.o
 endif
+
+ccflags-$(CONFIG_MIAMI_DTB) += -DPRODUCT_MIAMI
+ccflags-$(CONFIG_BANGKK_DTB) += -DPRODUCT_BANGKK

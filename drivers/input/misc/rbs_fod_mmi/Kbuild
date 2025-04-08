@@ -1,4 +1,5 @@
 ccflags-$(CONFIG_EGIS_PANEL_NOTIFICATIONS) += -DCONFIG_PANEL_NOTIFICATIONS
+ccflags-$(CONFIG_MMI_RELAY) += -DMMI_RELAY_MODULE
 rbs_fod_mmi-y += etxxx_fp.o
 
 obj-$(CONFIG_INPUT_RBS_FOD_MMI) += rbs_fod_mmi.o
