@@ -2,8 +2,6 @@ ifneq ($(filter m y,$(CONFIG_CHIPONE_ESD)),)
 ccflags-y += -DCONFIG_CTS_ESD_PROTECTION
 endif
 
-#ccflags-y += -DCONFIG_CTS_I2C_HOST
-
 ifneq ($(filter m y,$(CONFIG_INPUT_CHIPONE_0FLASH_MMI_ENABLE_DOUBLE_TAP)),)
 	ccflags-y += -DCHIPONE_SENSOR_EN
 endif

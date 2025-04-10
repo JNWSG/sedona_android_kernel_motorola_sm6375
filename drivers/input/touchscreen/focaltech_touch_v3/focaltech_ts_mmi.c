@@ -12,6 +12,7 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/touchscreen_mmi.h>
 #include <linux/regulator/consumer.h>
 #include "focaltech_core.h"
 #include "focaltech_ts_config.h"

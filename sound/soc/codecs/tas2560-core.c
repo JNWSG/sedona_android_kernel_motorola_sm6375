@@ -460,7 +460,7 @@ int tas2560_set_bit_rate(struct tas2560_priv *pTAS2560, unsigned int nBitRate)
 
 int tas2560_get_bit_rate(struct tas2560_priv *pTAS2560)
 {
-	int nBitRate = -1, value = -1;
+	int nBitRate = -1, value = -1
 
 	pTAS2560->read(pTAS2560, TAS2560_DAI_FMT, &value);
 	value &= 0x03;

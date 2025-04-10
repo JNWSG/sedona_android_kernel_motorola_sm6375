@@ -7,6 +7,4 @@ config CPS_WLS_CHARGER
         help
           Say Y to enable support for CPS wireless charger.
 
-          This driver can also be built as a module.  If so, the module
-          will be called cps4019_wls_charger.
 endmenu

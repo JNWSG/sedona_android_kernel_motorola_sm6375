@@ -1,9 +1,3 @@
-# add -Wall to try to catch everything we can.
-EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/include \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/focaltech_0flash_v2_mmi \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/drivers/input/touchscreen/focaltech_0flash_v2_mmi/include
-
 obj-$(CONFIG_INPUT_TOUCHSCREEN_FOCALTECH_0FLASH_MMI) := focaltech_0flash_v2_mmi.o
 focaltech_0flash_v2_mmi-objs += focaltech_core.o
 focaltech_0flash_v2_mmi-objs += focaltech_esdcheck.o
