@@ -625,10 +625,10 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 	case DRM_PANEL_BLANK_POWERDOWN:
 		if (DRM_PANEL_EARLY_EVENT_BLANK == event) {
 #ifdef ILI_DOUBLE_TAP_CTRL
-			if (ilits->should_enable_gesture) {
-				ILI_INFO("TP suspend: tap gesture suspend\n");
-				if (ili_sleep_handler(TP_SUSPEND) < 0)
-					ILI_ERR("TP suspend failed\n");
+				if (ilits->double_tap_enabled || ilits->single_tap_enabled) {
+					ILI_INFO("TP suspend: tap gesture suspend\n");
+					if (ili_sleep_handler(TP_SUSPEND) < 0)
+						ILI_ERR("TP suspend failed\n");
 #ifdef ILI_SET_TOUCH_STATE
 				touch_set_state(TOUCH_LOW_POWER_STATE, TOUCH_PANEL_IDX_PRIMARY);
 #endif
