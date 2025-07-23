@@ -126,6 +126,7 @@ config ARM64
 	select HAVE_ARCH_HUGE_VMAP
 	select HAVE_ARCH_JUMP_LABEL
 	select HAVE_ARCH_JUMP_LABEL_RELATIVE
+        select SHADOW_CALL_STACK
 	select HAVE_ARCH_KASAN if !(ARM64_16K_PAGES && ARM64_VA_BITS_48)
 	select HAVE_ARCH_KASAN_SW_TAGS if HAVE_ARCH_KASAN
 	select HAVE_ARCH_KGDB
@@ -170,6 +171,9 @@ config ARM64
 	select HAVE_RCU_TABLE_FREE
 	select HAVE_RSEQ
 	select HAVE_STACKPROTECTOR
+	select CC_HAS_STACKPROTECTOR_NONE
+	select STACKPROTECTOR
+	select STACKPROTECTOR_STRONG
 	select HAVE_SYSCALL_TRACEPOINTS
 	select HAVE_KPROBES
 	select HAVE_KRETPROBES
@@ -1996,3 +2000,15 @@ config MOT_SECURE_CAMERA
 config MOT_USB_DEBUG_LOG
 	bool "For usb debug log in factiry SW"
 	default n
+
+config MMI_QC3P_TURBO_CHARGER
+    bool "QC3P Turbo Charger Driver"
+    default y
+    help
+      This driver supports Motorola's proprietary QC3P Turbo Charging technology
+      that enables faster charging speeds while maintaining thermal safety.
+      
+      Say Y if you want to enable QC3P fast charging support on compatible
+      Motorola devices.
+
+      If unsure, say N.
