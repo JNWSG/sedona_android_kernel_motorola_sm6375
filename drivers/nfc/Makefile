@@ -21,3 +21,4 @@ obj-$(CONFIG_SEC_NFC)           += samsung/
 obj-$(CONFIG_NFC_SN1XX)         += sn1xx/
 obj-$(CONFIG_NFC_SN2XX)         += sn2xx/
 obj-y				+= qti/
+obj-$(CONFIG_NFC_ST21NFC)	+= st21nfc/
