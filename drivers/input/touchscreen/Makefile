@@ -123,3 +123,4 @@ obj-$(CONFIG_TOUCHSCREEN_ILI_9882_MMI)	+= ili9882_mmi/
 obj-$(CONFIG_TOUCHSCREEN_ILITEK_V3_MMI)	+= ilitek_v3_mmi/
 obj-$(CONFIG_TOUCHSCREEN_NT36xxx_HOSTDL_SPI_MMI)	+= nova_0flash_mmi/
 obj-$(CONFIG_INPUT_TOUCHSCREEN_MMI)	+= touchscreen_mmi/
+obj-$(CONFIG_INPUT_TOUCHSCREEN_FOCALTECH_0FLASH_MMI)	+= focaltech_0flash_v2_mmi/

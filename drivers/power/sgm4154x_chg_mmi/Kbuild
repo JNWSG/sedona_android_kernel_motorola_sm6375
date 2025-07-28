@@ -1,1 +1,2 @@
 obj-$(CONFIG_SGM4154X_CHARGER) += sgm4154x_charger.o
+ccflags-$(CONFIG_MMI_EXT_CHG_LED) += -DCONFIG_MMI_EXT_CHG_LED
