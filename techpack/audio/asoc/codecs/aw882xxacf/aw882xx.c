@@ -1080,7 +1080,7 @@ static void aw882xx_irq_restart(struct aw882xx *aw882xx)
 	aw_device_stop(aw882xx->aw_pa);
 
 	/*hw reset*/
-	aw882xx_hw_reset(aw882xx);
+	aw882xxacf_hw_reset(aw882xx);
 
 	/*aw reinit*/
 	if (aw882xx->fw_status == AW_DEV_FW_OK) {
@@ -2632,7 +2632,7 @@ static int aw882xx_parse_dt(struct device *dev, struct aw882xx *aw882xx,
 	return 0;
 }
 
-int aw882xx_hw_reset(struct aw882xx *aw882xx)
+int aw882xxacf_hw_reset(struct aw882xx *aw882xx)
 {
 	aw_dev_info(aw882xx->dev, "enter");
 
@@ -3241,7 +3241,7 @@ static int aw882xx_i2c_probe(struct i2c_client *i2c,
 		return ret;
 
 	/* hardware reset */
-	aw882xx_hw_reset(aw882xx);
+	aw882xxacf_hw_reset(aw882xx);
 
 	/* aw882xx chip id */
 	ret = aw882xx_read_chipid(aw882xx);
